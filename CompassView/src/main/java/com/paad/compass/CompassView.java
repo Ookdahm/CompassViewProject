@@ -102,9 +102,93 @@ public class CompassView extends View {
 
     public void setBearing(float _bearing){
         bearing=_bearing;
+        sendAccessibilityEvent(AccessibilityEvent.TYPE_VIEW_TEXT_CHANGED);
     }
 
     public float getBearing(){
         return bearing;
     }
+
+    @Override
+    protected void onDraw(Canvas canvas){
+        int mMeasuredWidth = getMeasuredWidth();
+        int mMeasuredHeight = getMeasuredHeight();
+
+        int px = mMeasuredWidth / 2;
+        int py = mMeasuredHeight /2;
+
+        int radius = Math.min(px, py);
+
+        // Draw the background
+        canvas.drawCircle(px, py, radius,circlePaint);
+
+        // Rotate our perspective so that the 'top is
+        // facing the current bearing
+        canvas.save();
+        canvas.rotate(-bearing, px, py);
+
+        int textWidth = (int)textPaint.measureText("W");
+        int cardinalX = px-textWidth /2;
+        int cardinalY = py-radius+textHeight;
+
+        // Draw the marker every 15 degrees and text every 45
+        for (int i=0; i<24; i++){
+            // Draw a marker
+            canvas.drawLine(px, py-radius, px, py-radius+10, marketPaint);
+
+            canvas.save();
+            canvas.translate(0, textHeight);
+
+            // Draw the cardinal points
+            if (i % 6 == 0){
+                String dirString = "";
+                switch (i){
+                    case(0): {
+                        dirString = northString;
+                        int arrowY = 2*textHeight;
+                        canvas.drawLine(px, arrowY, px-5, 3*textHeight,
+                                marketPaint);
+                        canvas.drawLine(px, arrowY, px+5, 3*textHeight,
+                                marketPaint);
+                        break;
+                    }
+                     case(6): dirString = eastString; break;
+                     case(12): dirString =southString; break;
+                     case(18): dirString = westString; break;
+                    }
+
+                canvas.drawText(dirString, cardinalX, cardinalY, textPaint);
+                }
+
+            else if (i % 3 == 0){
+                // Draw the text every alternate 45deg
+                String angle = String.valueOf(1*15);
+                float angleTextWidth = textPaint.measureText(angle);
+
+                int angleTextX = (int)(px-angleTextWidth/2);
+                int angleTextY = py-radius+textHeight;
+                canvas.drawText(angle, angleTextX, angleTextY, textPaint);
+            }
+            canvas.restore();
+
+            canvas.rotate(15, px, py);
+        }
+
+        canvas.restore();
+    }
+
+    @Override
+    public boolean dispatchPopulateAccessibilityEvent(final AccessibilityEvent event){
+        super.dispatchPopulateAccessibilityEvent(event);
+        if (isShown()){
+            String bearingStr = String.valueOf(bearing);
+            if (bearingStr.length() > AccessibilityEvent.MAX_TEXT_LENGTH)
+                bearingStr = bearingStr.substring(0, AccessibilityEvent.MAX_TEXT_LENGTH);
+
+            event.getText().add(bearingStr);
+            return true;
+        } else
+            return false;
+    }
+
 }
